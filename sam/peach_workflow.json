@@ -1,0 +1,79 @@
+{
+  "Comment": "Book Holiday",
+  "StartAt": "Book Flight",
+  "States": {
+    "Book Flight": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:::book_flight",
+        "Next": "Book Hotel"
+    },
+    "Cancel Flight": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:::function:cancel_flight",
+        "End": true
+    },
+    "Book Hotel": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:::function:book_hotel",
+        "Next": "Book Car",
+        "Catch": [
+            {
+                "ErrorEquals": ["States.ALL"],
+                "Next": "Cancel Flight"
+            }
+        ]
+    },
+    "Cancel Hotel": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:::function:cancel_hotel",
+        "Next": "Cancel Flight"
+    },
+    "Book Car": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:::function:book_car",
+        "Next": "Process Payment",
+        "Catch": [
+            {
+                "ErrorEquals": ["States.ALL"],
+                "Next": "Cancel Hotel"
+            }
+        ]
+    },
+    "Cancel Car": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:::function:cancel_car",
+        "Next": "Cancel Hotel"
+    },
+    "Process Payment": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:::function:process_payment.waitForTaskToken",
+        "Parameters":{  
+            "FunctionName":"validate_payment",
+            "Payload":{               
+               "token.$":"$$.Task.Token"
+            }
+         },
+        "End": true,
+        "Catch": [
+            {
+                "ErrorEquals": ["States.ALL"],
+                "Next": "Cancel Car"
+            }
+        ],
+        "Retry": [
+            {
+                "ErrorEquals": ["States.Timeout"],
+                "IntervalSeconds": 30,
+                "MaxAttempts": 5,
+                "BackoffRate": 2.0
+            },
+            {
+                "ErrorEquals": ["States.ALL"],
+                "IntervalSeconds": 10,
+                "MaxAttempts": 5,
+                "BackoffRate": 2.0
+            }
+        ]
+    }
+  }
+}

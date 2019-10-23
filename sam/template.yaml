@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-sagemaker-app
+
+  SAM App to retrain SageMaker models
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+  TrainingCompleteTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: "training-complete-topic"
+
+  StartTrainingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: start_training/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+      Events:
+        RunHourly:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 hour)
+
+  DeployModelFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: deploy_model/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+      Events:
+        HelloWorld:
+          Type: Api
+          Properties:
+            Path: /deploy_model
+            Method: get
+
+  LambdaFunctionIamRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        - 'arn:aws:iam::aws:policy/AmazonSageMakerFullAccess'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: 'sts:AssumeRole'
+            Principal:
+              Service: lambda.amazonaws.com
+Outputs:
+  SageMakerApi:
+    Description: "API Gateway endpoint URL for Prod stage for managing SageMaker jobs"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/sagemaker/"
+  StartTrainingFunction:
+    Description: "Starts the training model"
+    Value: !GetAtt StartTrainingFunction.Arn
+  DeployModelFunction:
+    Description: "Deploys model"
+    Value: !GetAtt DeployModelFunction.Arn
+  LambdaFunctionIamRole:
+    Description: "Implicit IAM Role created for running the lambdas"
+    Value: !GetAtt LambdaFunctionIamRole.Arn

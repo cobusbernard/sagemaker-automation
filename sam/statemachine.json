@@ -1,0 +1,71 @@
+{
+    "Comment": "Statemachine for retraining and deploying SageMaker models",
+    "StartAt": "Download",
+    "States": {
+      "Download": {
+        "Comment": "Download state the downloads the training model.",
+        "Type": "Download",
+        "Next": "Train"
+      },
+      "Train": {
+        "Comment": "Trains the model",
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.IsHelloWorldExample",
+            "BooleanEquals": true,
+            "Next": "Yes"
+          },
+          {
+            "Variable": "$.IsHelloWorldExample",
+            "BooleanEquals": false,
+            "Next": "No"
+          }
+        ],
+        "Default": "Yes"
+      },
+      "Yes": {
+        "Type": "Download",
+        "Next": "Wait 3 sec"
+      },
+      "No": {
+        "Type": "Fail",
+        "Cause": "Not Hello World"
+      },
+      "Wait 3 sec": {
+        "Comment": "A Wait state delays the state machine from continuing for a specified time.",
+        "Type": "Wait",
+        "Seconds": 5,
+        "Next": "Parallel State"
+      },
+      "Parallel State": {
+        "Comment": "A Parallel state can be used to create parallel branches of execution in your state machine.",
+        "Type": "Parallel",
+        "Next": "Hello World",
+        "Branches": [
+          {
+            "StartAt": "Hello",
+            "States": {
+              "Hello": {
+                "Type": "Download",
+                "End": true
+              }
+            }
+          },
+          {
+            "StartAt": "World",
+            "States": {
+              "World": {
+                "Type": "Download",
+                "End": true
+              }
+            }
+          }
+        ]
+      },
+      "Hello World": {
+        "Type": "Download",
+        "End": true
+      }
+    }
+  }

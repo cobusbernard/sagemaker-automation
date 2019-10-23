@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'sam-sagemaker-app
+
+  SAM App to retrain SageMaker models
+
+  '
+Globals:
+  Function:
+    Timeout: 3
+Outputs:
+  DeployModelFunction:
+    Description: Deploys model
+    Value:
+      Fn::GetAtt:
+      - DeployModelFunction
+      - Arn
+  LambdaFunctionIamRole:
+    Description: Implicit IAM Role created for running the lambdas
+    Value:
+      Fn::GetAtt:
+      - LambdaFunctionIamRole
+      - Arn
+  SageMakerApi:
+    Description: API Gateway endpoint URL for Prod stage for managing SageMaker jobs
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/sagemaker/
+  StartTrainingFunction:
+    Description: Starts the training model
+    Value:
+      Fn::GetAtt:
+      - StartTrainingFunction
+      - Arn
+Resources:
+  DeployModelFunction:
+    Properties:
+      CodeUri: s3://sagemaker-sam-cobus/13be5aa3cb2cba22d68d7ef4c4be1b2b
+      Events:
+        HelloWorld:
+          Properties:
+            Method: get
+            Path: /deploy_model
+          Type: Api
+      Handler: app.lambda_handler
+      Runtime: python3.7
+    Type: AWS::Serverless::Function
+  LambdaFunctionIamRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/AmazonSageMakerFullAccess
+    Type: AWS::IAM::Role
+  StartTrainingFunction:
+    Properties:
+      CodeUri: s3://sagemaker-sam-cobus/73a476e123e5604e3b19a429d4c84bf7
+      Events:
+        RunHourly:
+          Properties:
+            Schedule: rate(1 hour)
+          Type: Schedule
+      Handler: app.lambda_handler
+      Runtime: python3.7
+    Type: AWS::Serverless::Function
+  TrainingCompleteTopic:
+    Properties:
+      DisplayName: training-complete-topic
+    Type: AWS::SNS::Topic
+Transform: AWS::Serverless-2016-10-31
